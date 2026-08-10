@@ -3,7 +3,7 @@
 公开分发仓库：提供二进制发布资产、安装脚本和运维文档。
 
 # 项目源码
-https://github.com/iniwex5/vohive
+https://github.com/kimoju/vohive
 
 ## 免责声明
 
@@ -77,7 +77,7 @@ echo 'AT+QCFG="usbnet",0;+CFUN=1,1' | sudo socat - /dev/ttyUSB2,crnl
 Linux / OpenWrt：
 
 ```sh
-wget -O - https://raw.githubusercontent.com/iniwex5/vohive-release/master/install.sh | sh
+wget -O - https://raw.githubusercontent.com/kimoju/vohive-release/master/install.sh | sh
 ```
 
 说明：旧的 `curl -fsSL ... | bash` 方式仍然兼容。
@@ -85,19 +85,19 @@ wget -O - https://raw.githubusercontent.com/iniwex5/vohive-release/master/instal
 指定版本：
 
 ```sh
-wget -O - https://raw.githubusercontent.com/iniwex5/vohive-release/master/install.sh | sh -s -- --version v1.5.3
+wget -O - https://raw.githubusercontent.com/kimoju/vohive-release/master/install.sh | sh -s -- --version v1.5.3
 ```
 
 仅安装二进制（跳过自动服务注册，兼容旧参数名 `--no-systemd`）：
 
 ```sh
-wget -O - https://raw.githubusercontent.com/iniwex5/vohive-release/master/install.sh | sh -s -- --no-systemd
+wget -O - https://raw.githubusercontent.com/kimoju/vohive-release/master/install.sh | sh -s -- --no-systemd
 ```
 
 卸载：
 
 ```sh
-wget -O - https://raw.githubusercontent.com/iniwex5/vohive-release/master/uninstall.sh | sh
+wget -O - https://raw.githubusercontent.com/kimoju/vohive-release/master/uninstall.sh | sh
 ```
 
 
