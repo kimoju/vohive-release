@@ -1,15 +1,16 @@
 [Unit]
 Description=VoHive Service
-After=network-online.target
+After=network-online.target pcscd.socket
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/opt/vohive
-ExecStart=/opt/vohive/bin/vohive -c /opt/vohive/config/config.yaml
+ExecStart="/opt/vohive/bin/vohive" -c "/opt/vohive/config/config.yaml"
 Restart=always
 RestartSec=3
+TimeoutStopSec=20
 LimitNOFILE=1048576
 
 [Install]

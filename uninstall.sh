@@ -22,11 +22,38 @@ err() { printf '[vohive-uninstall] 错误: %s\n' "$*" >&2; }
 
 usage() {
   cat <<USAGE
-Usage: uninstall.sh [options]
-  --purge
-  --keep-config
-  --dry-run
+用法: uninstall.sh [选项]
+  --purge        同时清理数据与日志目录（默认仅移除服务与二进制）
+  --keep-config  配合 --purge 使用时保留配置目录
+  --dry-run      仅打印将要执行的操作，不修改系统文件
 USAGE
+}
+
+validate_safe_path() {
+  label="$1"
+  val="$2"
+  case "$val" in
+    ""|/|*[!A-Za-z0-9._/-]*|*/../*|*/..|../*)
+      err "${label} 包含非法或不安全路径: ${val}"
+      exit 1
+      ;;
+    /*)
+      ;;
+    *)
+      err "${label} 必须为绝对路径: ${val}"
+      exit 1
+      ;;
+  esac
+}
+
+validate_install_root() {
+  validate_safe_path "VOHIVE_INSTALL_ROOT" "$1"
+  case "$1" in
+    /bin|/sbin|/usr|/etc|/var|/opt|/home|/root|/tmp|/dev|/proc|/sys|/run|/lib|/lib64|/data)
+      err "VOHIVE_INSTALL_ROOT 不能指向系统顶层目录: $1"
+      exit 1
+      ;;
+  esac
 }
 
 run_root() {
@@ -99,18 +126,28 @@ remove_service_systemd() {
   run_root systemctl disable vohive || true
   run_root rm -f "${SYSTEMD_SERVICE_PATH}"
   run_root systemctl daemon-reload || true
+  run_root systemctl reset-failed vohive || true
 }
 
 remove_service_openwrt() {
-  if [ -f "${OPENWRT_INIT_PATH}" ]; then
-    run_root "${OPENWRT_INIT_PATH}" stop || true
-    run_root "${OPENWRT_INIT_PATH}" disable || true
+  if [ -f "${OPENWRT_INIT_PATH}" ] || [ -L "${OPENWRT_INIT_PATH}" ]; then
+    if [ -n "${VOHIVE_RC_COMMON_PATH:-}" ] && [ "${DRY_RUN}" != "1" ]; then
+      run_root /bin/sh "${VOHIVE_RC_COMMON_PATH}" "${OPENWRT_INIT_PATH}" stop || true
+      run_root /bin/sh "${VOHIVE_RC_COMMON_PATH}" "${OPENWRT_INIT_PATH}" disable || true
+    else
+      run_root "${OPENWRT_INIT_PATH}" stop || true
+      run_root "${OPENWRT_INIT_PATH}" disable || true
+    fi
     run_root rm -f "${OPENWRT_INIT_PATH}"
   fi
 }
 
 main() {
   parse_args "$@"
+
+  validate_install_root "${ROOT_DIR}"
+  validate_safe_path "VOHIVE_SYSTEMD_SERVICE_PATH" "${SYSTEMD_SERVICE_PATH}"
+  validate_safe_path "VOHIVE_OPENWRT_INIT_PATH" "${OPENWRT_INIT_PATH}"
 
   platform="$(detect_platform)"
   case "${platform}" in
@@ -129,16 +166,27 @@ main() {
       ;;
   esac
 
-  run_root rm -f "${BIN_PATH}" "${BACKUP_PATH}"
+  run_root rm -f "${BIN_PATH}" "${BACKUP_PATH}" "${BIN_PATH}.tmp" "${BACKUP_PATH}.tmp"
 
   if [ "${PURGE}" = "1" ]; then
     if [ "${KEEP_CONFIG}" = "0" ]; then
       run_root rm -rf "${CONFIG_DIR}"
+    else
+      log "已按 --keep-config 保留配置目录: ${CONFIG_DIR}"
     fi
     run_root rm -rf "${DATA_DIR}"
     run_root rm -rf "${LOG_DIR}"
-    run_root rmdir "${ROOT_DIR}/bin" 2>/dev/null || true
-    run_root rmdir "${ROOT_DIR}" 2>/dev/null || true
+    if [ "${DRY_RUN}" = "1" ] || [ -d "${ROOT_DIR}/bin" ]; then
+      run_root rmdir "${ROOT_DIR}/bin" 2>/dev/null || true
+    fi
+    if [ "${KEEP_CONFIG}" = "0" ] && { [ "${DRY_RUN}" = "1" ] || [ -d "${ROOT_DIR}" ]; }; then
+      run_root rmdir "${ROOT_DIR}" 2>/dev/null || true
+    fi
+  else
+    if [ "${DRY_RUN}" = "1" ] || [ -d "${ROOT_DIR}/bin" ]; then
+      run_root rmdir "${ROOT_DIR}/bin" 2>/dev/null || true
+    fi
+    log "已保留配置与数据目录: ${CONFIG_DIR}, ${DATA_DIR}, ${LOG_DIR}（如需彻底清理请附加 --purge）"
   fi
 
   log "卸载完成"
