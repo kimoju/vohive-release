@@ -137,7 +137,7 @@ web:
 ```yaml
 services:
   vohive:
-    image: iniwex/vohive:latest
+    image: kimoju/vohive:latest
     container_name: vohive
     restart: unless-stopped
     network_mode: host
